@@ -1,9 +1,8 @@
-
 import React, { useState, useEffect } from 'react';
 import { storageService } from '../services/storageService';
 import { googleApiService } from '../services/googleApiService';
-import { ClassGroup, Gender, LEVELS, User, EnrollmentStatus, Content, ContentType, Quiz, Question, QuestionType, LiveSession, UserRole } from '../types';
-import { Users, BookOpen, Clock, FileText, CheckCircle, XCircle, Upload, Trash2, Video, Music, File, AlertTriangle, UserPlus, X, HelpCircle, Calendar, Plus, ExternalLink, RefreshCw, Filter } from 'lucide-react';
+import { ClassGroup, Gender, LEVELS, User, EnrollmentStatus, Content, ContentType, Quiz, Question, QuestionType, LiveSession, UserRole, SubscriptionPlan } from '../types';
+import { Users, BookOpen, Clock, FileText, CheckCircle, XCircle, Upload, Trash2, Video, Music, AlertTriangle, UserPlus, HelpCircle, Calendar, ExternalLink, RefreshCw, Filter } from 'lucide-react';
 
 export const AdminStats: React.FC = () => {
   const [stats, setStats] = useState(storageService.getStats());
@@ -34,6 +33,49 @@ export const AdminStats: React.FC = () => {
         <StatCard title="Classes Actives" value={stats.totalClasses} icon={BookOpen} color="border-indigo-500" />
         <StatCard title="En attente" value={stats.pendingEnrollments} icon={Clock} color="border-amber-500" />
         <StatCard title="Contenus & Quiz" value={stats.totalContent + stats.totalQuizzes} icon={FileText} color="border-rose-500" />
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Charts Visualization (CSS only for simplicity/performance) */}
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+              <h3 className="font-bold text-gray-700 mb-6">Répartition du Contenu</h3>
+              <div className="flex items-center justify-center gap-8">
+                  <div className="relative w-40 h-40 rounded-full border-[16px] border-gray-100 flex items-center justify-center" 
+                       style={{
+                           background: `conic-gradient(
+                               #f87171 0% ${((stats.contentByType.VIDEO / stats.totalContent) || 0) * 100}%, 
+                               #60a5fa ${((stats.contentByType.VIDEO / stats.totalContent) || 0) * 100}% ${(((stats.contentByType.VIDEO + stats.contentByType.AUDIO) / stats.totalContent) || 0) * 100}%, 
+                               #fb923c ${(((stats.contentByType.VIDEO + stats.contentByType.AUDIO) / stats.totalContent) || 0) * 100}% 100%
+                           )`
+                       }}>
+                      <div className="absolute inset-0 m-4 bg-white rounded-full flex flex-col items-center justify-center">
+                          <span className="text-3xl font-black text-gray-800">{stats.totalContent}</span>
+                          <span className="text-xs text-gray-400 font-bold uppercase">Fichiers</span>
+                      </div>
+                  </div>
+                  <div className="space-y-3">
+                      <div className="flex items-center gap-2 text-sm"><span className="w-3 h-3 rounded-full bg-red-400"></span> Vidéos ({stats.contentByType.VIDEO})</div>
+                      <div className="flex items-center gap-2 text-sm"><span className="w-3 h-3 rounded-full bg-blue-400"></span> Audios ({stats.contentByType.AUDIO})</div>
+                      <div className="flex items-center gap-2 text-sm"><span className="w-3 h-3 rounded-full bg-orange-400"></span> Documents ({stats.contentByType.DOCUMENT})</div>
+                  </div>
+              </div>
+          </div>
+
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+              <h3 className="font-bold text-gray-700 mb-4">Activité Récente</h3>
+              <div className="space-y-4">
+                  {[1,2,3].map(i => (
+                      <div key={i} className="flex items-center gap-4 p-3 hover:bg-gray-50 rounded-xl transition-colors">
+                          <div className="w-10 h-10 rounded-full bg-teal-50 flex items-center justify-center text-teal-600 font-bold text-xs">S{i}</div>
+                          <div>
+                              <p className="text-sm font-bold text-gray-800">Nouvelle inscription validée</p>
+                              <p className="text-xs text-gray-400">Il y a {i * 2} heures</p>
+                          </div>
+                      </div>
+                  ))}
+                  <button className="w-full text-center text-sm text-teal-600 font-bold mt-2 hover:underline">Voir tout l'historique</button>
+              </div>
+          </div>
       </div>
     </div>
   );
@@ -196,7 +238,12 @@ export const AdminStudents: React.FC = () => {
             id: Date.now().toString(),
             role: UserRole.STUDENT,
             joinedAt: new Date().toISOString(),
-            ...newUser
+            ...newUser,
+            xp: 0,
+            level: 1,
+            badges: [],
+            subscriptionPlan: SubscriptionPlan.FREE,
+            referralCode: ''
         };
         if(storageService.register(user)) {
             alert("Élève ajouté avec succès !");
@@ -239,10 +286,10 @@ export const AdminStudents: React.FC = () => {
                 <table className="w-full text-left">
                     <thead className="bg-gray-50 border-b border-gray-100">
                         <tr>
-                            <th className="p-4 text-xs font-bold text-gray-500 uppercase">Nom</th>
-                            <th className="p-4 text-xs font-bold text-gray-500 uppercase">Contact</th>
-                            <th className="p-4 text-xs font-bold text-gray-500 uppercase">Genre</th>
-                            <th className="p-4 text-xs font-bold text-gray-500 uppercase">Inscrit le</th>
+                            <th className="p-4 text-xs font-bold text-gray-50 uppercase">Nom</th>
+                            <th className="p-4 text-xs font-bold text-gray-50 uppercase">Contact</th>
+                            <th className="p-4 text-xs font-bold text-gray-50 uppercase">Genre</th>
+                            <th className="p-4 text-xs font-bold text-gray-50 uppercase">Inscrit le</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50">
@@ -276,6 +323,7 @@ export const AdminContent: React.FC = () => {
   // Filtering states for Content
   const [filterType, setFilterType] = useState<'ALL' | ContentType>('ALL');
   const [filterClassId, setFilterClassId] = useState<string>('ALL');
+  const [filterLevel, setFilterLevel] = useState<string>('ALL');
 
   // Google Auth State
   const [isGoogleAuthorized, setIsGoogleAuthorized] = useState(false);
@@ -437,11 +485,20 @@ export const AdminContent: React.FC = () => {
       alert("Session Live planifiée !");
   };
 
+  // Logic to extract and sort unique levels - Explicitly typed to avoid 'any' error
+  const uniqueLevels = Array.from(new Set(classes.map(c => c.level))).sort((a: string, b: string) => {
+    const numA = parseInt(a.replace(/\D/g, '')) || 0;
+    const numB = parseInt(b.replace(/\D/g, '')) || 0;
+    return numA - numB;
+  });
+
   // Filter Logic
   const filteredContents = contents.filter(c => {
+      const cls = classes.find(cl => cl.id === c.classId);
       const matchesType = filterType === 'ALL' || c.type === filterType;
       const matchesClass = filterClassId === 'ALL' || c.classId === filterClassId;
-      return matchesType && matchesClass;
+      const matchesLevel = filterLevel === 'ALL' || cls?.level === filterLevel;
+      return matchesType && matchesClass && matchesLevel;
   });
 
   return (
@@ -476,17 +533,25 @@ export const AdminContent: React.FC = () => {
                </div>
                
                {/* Filters */}
-               <div className="bg-white p-4 rounded-xl border border-gray-100 flex flex-col md:flex-row gap-4 justify-between items-center shadow-sm">
-                   <div className="flex gap-2 items-center w-full md:w-auto overflow-x-auto pb-2 md:pb-0">
-                       <span className="text-gray-400 text-sm flex items-center gap-1 mr-2"><Filter size={16}/> Filtrer:</span>
+               <div className="bg-white p-4 rounded-xl border border-gray-100 flex flex-col xl:flex-row gap-4 justify-between items-center shadow-sm">
+                   <div className="flex gap-2 items-center w-full overflow-x-auto pb-2 xl:pb-0">
+                       <span className="text-gray-400 text-sm flex items-center gap-1 mr-2 shrink-0"><Filter size={16}/> Filtrer:</span>
                        <button onClick={() => setFilterType('ALL')} className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${filterType === 'ALL' ? 'bg-teal-600 text-white' : 'bg-gray-50 text-gray-600 hover:bg-gray-100 border border-gray-200'}`}>Tout</button>
                        <button onClick={() => setFilterType(ContentType.VIDEO)} className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${filterType === ContentType.VIDEO ? 'bg-teal-600 text-white' : 'bg-gray-50 text-gray-600 hover:bg-gray-100 border border-gray-200'}`}>Vidéos</button>
                        <button onClick={() => setFilterType(ContentType.AUDIO)} className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${filterType === ContentType.AUDIO ? 'bg-teal-600 text-white' : 'bg-gray-50 text-gray-600 hover:bg-gray-100 border border-gray-200'}`}>Audios</button>
                        <button onClick={() => setFilterType(ContentType.DOCUMENT)} className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${filterType === ContentType.DOCUMENT ? 'bg-teal-600 text-white' : 'bg-gray-50 text-gray-600 hover:bg-gray-100 border border-gray-200'}`}>Docs</button>
                    </div>
-                   <div className="w-full md:w-auto">
+                   <div className="w-full flex gap-2">
                         <select 
-                            className="w-full md:w-64 p-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 bg-gray-50"
+                            className="flex-1 p-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 bg-gray-50"
+                            value={filterLevel}
+                            onChange={(e) => setFilterLevel(e.target.value)}
+                        >
+                            <option value="ALL">Tous les niveaux</option>
+                            {uniqueLevels.map(lvl => <option key={lvl} value={lvl}>{String(lvl)}</option>)}
+                        </select>
+                        <select 
+                            className="flex-1 p-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 bg-gray-50"
                             value={filterClassId}
                             onChange={(e) => setFilterClassId(e.target.value)}
                         >
@@ -507,7 +572,7 @@ export const AdminContent: React.FC = () => {
                                </div>
                                <div>
                                     <span className="font-bold text-gray-800">{c.title}</span> 
-                                    <p className="text-xs text-gray-500 mt-0.5">Classe: {classes.find(cl => cl.id === c.classId)?.name} • Ajouté le {new Date(c.createdAt).toLocaleDateString()}</p>
+                                    <p className="text-xs text-gray-500 mt-0.5">Classe: {classes.find(cl => cl.id === c.classId)?.name} • {classes.find(cl => cl.id === c.classId)?.level} • Ajouté le {new Date(c.createdAt).toLocaleDateString()}</p>
                                </div>
                            </div>
                            <button onClick={() => promptDelete(c.id)} className="text-gray-300 hover:text-red-500 transition-colors p-2"><Trash2 size={18} /></button>
@@ -653,7 +718,7 @@ export const AdminContent: React.FC = () => {
                        <div key={l.id} className="bg-white p-4 rounded-xl border border-gray-100 flex justify-between items-center">
                            <div>
                                <p className="font-bold text-gray-800">{l.title}</p>
-                               <p className="text-sm text-gray-500">{new Date(l.scheduledAt).toLocaleString()} • {l.platform}</p>
+                               <p className="text-sm text-gray-500">{new Date(l.scheduledAt).toLocaleString()}</p>
                            </div>
                            <a href={l.meetingLink} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline flex items-center gap-1 text-sm"><ExternalLink size={14}/> Lien</a>
                        </div>

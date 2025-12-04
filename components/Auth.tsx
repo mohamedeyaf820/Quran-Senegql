@@ -1,7 +1,15 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { storageService } from '../services/storageService';
+import { googleApiService } from '../services/googleApiService';
 import { UserRole, User, SubscriptionPlan } from '../types';
-import { LogIn, UserPlus, Shield, GraduationCap, ChevronRight } from 'lucide-react';
+import { LogIn, UserPlus, Shield, GraduationCap, ChevronRight, AlertTriangle } from 'lucide-react';
+
+declare global {
+  interface Window {
+    google: any;
+  }
+}
 
 interface AuthProps {
   onLogin: (user: User) => void;
@@ -22,6 +30,52 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
   const [error, setError] = useState('');
 
   const logoUrl = "https://file-service-104866657805.us-central1.run.app/files/aa932470-360d-4702-8618-f2b3e8e74a87";
+  const isGoogleConfigured = !googleApiService.clientId.startsWith('YOUR_');
+
+  // Init Google Sign-In Button
+  useEffect(() => {
+    if (targetRole === UserRole.STUDENT && window.google && isGoogleConfigured) {
+        try {
+            window.google.accounts.id.initialize({
+                client_id: googleApiService.clientId,
+                callback: (response: any) => {
+                    const userProfile = googleApiService.handleCredentialResponse(response);
+                    if (userProfile) {
+                        const user = storageService.loginGoogleUser({
+                            email: userProfile.email,
+                            firstName: userProfile.firstName,
+                            lastName: userProfile.lastName,
+                            picture: userProfile.picture
+                        });
+                        onLogin(user);
+                    } else {
+                        setError("Échec de l'authentification Google.");
+                    }
+                }
+            });
+
+            window.google.accounts.id.renderButton(
+                document.getElementById("googleSignInBtn"),
+                { theme: "outline", size: "large", width: "100%", text: isLogin ? "signin_with" : "signup_with" }
+            );
+        } catch (e) {
+            console.error("Erreur affichage bouton Google", e);
+        }
+    }
+  }, [targetRole, isLogin, isGoogleConfigured]);
+
+  // Fonction de simulation pour le développement
+  const handleMockGoogleLogin = () => {
+      const mockProfile = {
+          email: `user.test.${Date.now()}@gmail.com`,
+          firstName: "Google",
+          lastName: "User",
+          picture: ""
+      };
+      const user = storageService.loginGoogleUser(mockProfile);
+      alert(`[MODE DEV] Connexion simulée avec ${mockProfile.email}`);
+      onLogin(user);
+  };
 
   const handleRoleChange = (role: UserRole) => {
     setTargetRole(role);
@@ -110,7 +164,7 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
         </div>
 
         {/* Right Side: Form */}
-        <div className="md:col-span-3 p-8 md:p-12 flex flex-col justify-center bg-white">
+        <div className="md:col-span-3 p-8 md:p-12 flex flex-col justify-center bg-white relative">
             
             {/* Mobile Logo */}
             <div className="md:hidden text-center mb-6">
@@ -119,7 +173,7 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
             </div>
 
             {/* Role Switcher */}
-            <div className="flex bg-slate-100 p-1.5 rounded-xl mb-8 self-center w-full max-w-sm">
+            <div className="flex bg-slate-100 p-1.5 rounded-xl mb-6 self-center w-full max-w-sm">
             <button
                 onClick={() => handleRoleChange(UserRole.STUDENT)}
                 className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-semibold rounded-lg transition-all duration-300 ${
@@ -161,6 +215,30 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
             )}
 
             <form onSubmit={handleSubmit} className="space-y-4">
+            
+            {/* GOOGLE SIGN IN BUTTON */}
+            {targetRole === UserRole.STUDENT && (
+                <>
+                    {isGoogleConfigured ? (
+                        <div id="googleSignInBtn" className="w-full"></div>
+                    ) : (
+                        <button 
+                            type="button"
+                            onClick={handleMockGoogleLogin}
+                            className="w-full flex items-center justify-center gap-2 py-2.5 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-gray-700 font-medium"
+                        >
+                            <img src="https://www.svgrepo.com/show/475656/google-color.svg" className="w-5 h-5" alt="Google" />
+                            Continuer avec Google (Simulation)
+                        </button>
+                    )}
+                    <div className="flex items-center gap-4 text-xs text-gray-400 font-medium">
+                        <div className="h-px bg-gray-200 flex-1"></div>
+                        OU
+                        <div className="h-px bg-gray-200 flex-1"></div>
+                    </div>
+                </>
+            )}
+
             {!isLogin && targetRole === UserRole.STUDENT && (
                 <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
                     <div className="grid grid-cols-2 gap-4">

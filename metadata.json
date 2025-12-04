@@ -1,5 +1,7 @@
 {
   "name": "Quran Senegal",
   "description": "Plateforme d'apprentissage du Coran avec gestion de classes, niveaux et contenus multimédias.",
-  "requestFramePermissions": []
+  "requestFramePermissions": [
+    "microphone"
+  ]
 }

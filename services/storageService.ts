@@ -1,5 +1,5 @@
 
-import { User, ClassGroup, Content, EnrollmentRequest, UserRole, EnrollmentStatus, Quiz, QuizAttempt, LiveSession, Notification, SubscriptionPlan, ForumPost, Resource, BADGES_LIST } from '../types';
+import { User, ClassGroup, Content, EnrollmentRequest, UserRole, EnrollmentStatus, Quiz, QuizAttempt, LiveSession, Notification, SubscriptionPlan, ForumPost, Resource, BADGES_LIST, Gender, ContentType, LEVELS, QuestionType, DailyInspiration } from '../types';
 
 const KEYS = {
   USERS: 'qs_users',
@@ -37,7 +37,8 @@ const simulateEmail = (to: string, subject: string, body: string) => {
 
 export const storageService = {
   init: () => {
-    const users = get<User>(KEYS.USERS);
+    // 1. ADMIN INITIALIZATION
+    let users = get<User>(KEYS.USERS);
     if (users.length === 0) {
       const admin: User = {
         id: 'admin-001',
@@ -55,25 +56,190 @@ export const storageService = {
         subscriptionPlan: SubscriptionPlan.PREMIUM_YEARLY,
         referralCode: 'ADMIN'
       };
-      set(KEYS.USERS, [admin]);
+      users = [admin];
+      set(KEYS.USERS, users);
     }
-    
-    // Init Mock Resources if empty
+
+    // 2. MOCK STUDENTS GENERATION (If only admin exists or forced check)
+    // We check if we have less than 2 users to trigger student generation
+    if (users.length <= 1) {
+        console.log("Generating 6 Mock Students...");
+        
+        const mockStudents: User[] = [
+            // HOMMES
+            {
+                id: 's1', firstName: 'Moussa', lastName: 'Diop', email: 'moussa@test.com', phone: '770000001', password: '123',
+                role: UserRole.STUDENT, gender: 'Homme', joinedAt: new Date(Date.now() - 86400000 * 30).toISOString(),
+                xp: 1250, level: 3, badges: [BADGES_LIST[0], BADGES_LIST[1]], subscriptionPlan: SubscriptionPlan.PREMIUM_MONTHLY, referralCode: 'MOU123'
+            },
+            {
+                id: 's3', firstName: 'Amadou', lastName: 'Fall', email: 'amadou@test.com', phone: '770000003', password: '123',
+                role: UserRole.STUDENT, gender: 'Homme', joinedAt: new Date(Date.now() - 86400000 * 10).toISOString(),
+                xp: 150, level: 1, badges: [], subscriptionPlan: SubscriptionPlan.FREE, referralCode: 'AMA789'
+            },
+            {
+                id: 's5', firstName: 'Cheikh', lastName: 'Beye', email: 'cheikh@test.com', phone: '770000005', password: '123',
+                role: UserRole.STUDENT, gender: 'Homme', joinedAt: new Date(Date.now() - 86400000 * 2).toISOString(),
+                xp: 50, level: 0, badges: [], subscriptionPlan: SubscriptionPlan.FREE, referralCode: 'CHE202'
+            },
+            // FEMMES
+            {
+                id: 's2', firstName: 'Fatou', lastName: 'Ndiaye', email: 'fatou@test.com', phone: '770000002', password: '123',
+                role: UserRole.STUDENT, gender: 'Femme', joinedAt: new Date(Date.now() - 86400000 * 60).toISOString(),
+                xp: 2800, level: 5, badges: [BADGES_LIST[0], BADGES_LIST[2], BADGES_LIST[4]], subscriptionPlan: SubscriptionPlan.PREMIUM_YEARLY, referralCode: 'FAT456'
+            },
+            {
+                id: 's4', firstName: 'Aissatou', lastName: 'Sow', email: 'aicha@test.com', phone: '770000004', password: '123',
+                role: UserRole.STUDENT, gender: 'Femme', joinedAt: new Date(Date.now() - 86400000 * 5).toISOString(),
+                xp: 450, level: 2, badges: [BADGES_LIST[0]], subscriptionPlan: SubscriptionPlan.FREE, referralCode: 'AIS101'
+            },
+             {
+                id: 's6', firstName: 'Mariama', lastName: 'Ba', email: 'mariama@test.com', phone: '770000006', password: '123',
+                role: UserRole.STUDENT, gender: 'Femme', joinedAt: new Date(Date.now() - 86400000 * 1).toISOString(),
+                xp: 0, level: 0, badges: [], subscriptionPlan: SubscriptionPlan.FREE, referralCode: 'MAR303'
+            }
+        ];
+        
+        users = [...users, ...mockStudents];
+        set(KEYS.USERS, users);
+    }
+
+    // 3. MOCK CLASSES
+    let classes = get<ClassGroup>(KEYS.CLASSES);
+    if (classes.length === 0) {
+        const mockClassesData: ClassGroup[] = [
+            {
+                id: 'c1', name: 'Initiation Alphabet', level: LEVELS[0], gender: Gender.MIXED, capacity: 50,
+                description: 'Apprentissage des lettres de base et de la prononciation correcte.',
+                studentIds: ['s3', 's5', 's6']
+            },
+            {
+                id: 'c2', name: 'Mémorisation Juz Amma', level: LEVELS[1], gender: Gender.FEMALE, capacity: 20,
+                description: 'Cercle réservé aux soeurs pour la mémorisation du dernier Juz.',
+                studentIds: ['s2', 's4']
+            },
+            {
+                id: 'c3', name: 'Tajwid Théorique & Pratique', level: LEVELS[3], gender: Gender.MALE, capacity: 30,
+                description: 'Étude approfondie des règles de Noon Sakina et Madd.',
+                studentIds: ['s1']
+            },
+            {
+                id: 'c4', name: 'Lecture Fluide', level: LEVELS[2], gender: Gender.MIXED, capacity: 40,
+                description: 'Pour ceux qui connaissent les lettres mais butent sur la lecture.',
+                studentIds: ['s3', 's4']
+            },
+            {
+                id: 'c5', name: 'Exégèse (Tafsir)', level: LEVELS[4], gender: Gender.MIXED, capacity: 100,
+                description: 'Comprendre le sens profond des versets. Niveau intermédiaire requis.',
+                studentIds: ['s1', 's2']
+            }
+        ];
+        set(KEYS.CLASSES, mockClassesData);
+        classes = mockClassesData;
+    }
+
+    // 4. MOCK ENROLLMENTS
+    let enrollments = get<EnrollmentRequest>(KEYS.ENROLLMENTS);
+    if (enrollments.length === 0) {
+        const mockEnrollments: EnrollmentRequest[] = [
+            // Approved
+            { id: 'e1', userId: 's3', userName: 'Amadou Fall', classId: 'c1', className: 'Initiation Alphabet', status: EnrollmentStatus.APPROVED, requestedAt: new Date().toISOString() },
+            { id: 'e2', userId: 's5', userName: 'Cheikh Beye', classId: 'c1', className: 'Initiation Alphabet', status: EnrollmentStatus.APPROVED, requestedAt: new Date().toISOString() },
+            { id: 'e3', userId: 's2', userName: 'Fatou Ndiaye', classId: 'c2', className: 'Mémorisation Juz Amma', status: EnrollmentStatus.APPROVED, requestedAt: new Date().toISOString() },
+            { id: 'e4', userId: 's1', userName: 'Moussa Diop', classId: 'c3', className: 'Tajwid Théorique', status: EnrollmentStatus.APPROVED, requestedAt: new Date().toISOString() },
+            { id: 'e7', userId: 's4', userName: 'Aissatou Sow', classId: 'c4', className: 'Lecture Fluide', status: EnrollmentStatus.APPROVED, requestedAt: new Date().toISOString() },
+
+            // Pending
+            { id: 'e5', userId: 's6', userName: 'Mariama Ba', classId: 'c2', className: 'Mémorisation Juz Amma', status: EnrollmentStatus.PENDING, requestedAt: new Date().toISOString() },
+            { id: 'e6', userId: 's5', userName: 'Cheikh Beye', classId: 'c4', className: 'Lecture Fluide', status: EnrollmentStatus.PENDING, requestedAt: new Date().toISOString() }
+        ];
+        set(KEYS.ENROLLMENTS, mockEnrollments);
+    }
+
+    // 5. MOCK CONTENT
+    let content = get<Content>(KEYS.CONTENT);
+    if (content.length === 0) {
+        const mockContent: Content[] = [
+            {
+                id: 'ct1', classId: 'c1', title: 'Leçon 1: Alif à Tha', description: 'Introduction aux premières lettres.',
+                type: ContentType.VIDEO, dataUrl: 'data:video/mp4;base64,AAAA', fileName: 'lecon1.mp4', createdAt: new Date().toISOString(), comments: []
+            },
+            {
+                id: 'ct2', classId: 'c1', title: 'Fiche d\'écriture', description: 'Exercice à imprimer.',
+                type: ContentType.DOCUMENT, dataUrl: 'data:application/pdf;base64,JVBERi0xLjQK...', fileName: 'ecriture.pdf', createdAt: new Date().toISOString(), comments: []
+            },
+            {
+                id: 'ct3', classId: 'c3', title: 'Règle de l\'Idgham', description: 'Explication audio avec exemples.',
+                type: ContentType.AUDIO, dataUrl: 'data:audio/mp3;base64,//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq', fileName: 'idgham.mp3', createdAt: new Date().toISOString(), comments: []
+            },
+            {
+                 id: 'ct4', classId: 'c2', title: 'Sourate An-Naba', description: 'Répétition pour mémorisation.',
+                 type: ContentType.AUDIO, dataUrl: 'data:audio/mp3;base64,//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq', fileName: 'naba.mp3', createdAt: new Date().toISOString(), comments: []
+            }
+        ];
+        set(KEYS.CONTENT, mockContent);
+    }
+
+    // 6. MOCK QUIZZES
+    const quizzes = get<Quiz>(KEYS.QUIZZES);
+    if (quizzes.length === 0) {
+         set(KEYS.QUIZZES, [
+            {
+                id: 'q1', classId: 'c1', title: 'Quiz Alphabet', description: 'Testez vos connaissances sur les lettres.',
+                questions: [
+                    { id: 'qq1', type: QuestionType.MCQ_SINGLE, text: 'Quelle est la première lettre ?', options: ['Ba', 'Alif', 'Ta'], correctAnswers: ['Alif'], points: 10 },
+                    { id: 'qq2', type: QuestionType.TRUE_FALSE, text: 'La lettre Ba a un point en dessous.', points: 10 }
+                ],
+                timeLimitMinutes: 10, passingScore: 50, maxAttempts: 3, createdAt: new Date().toISOString()
+            },
+            {
+                id: 'q2', classId: 'c3', title: 'Examen Tajwid', description: 'Règles de Nun Sakina.',
+                questions: [
+                    { id: 'qq3', type: QuestionType.MCQ_MULTI, text: 'Lesquelles sont des lettres de Idgham ?', options: ['Ya', 'Ra', 'Mim', 'Lam', 'Waw', 'Nun'], points: 20 },
+                    { id: 'qq4', type: QuestionType.AUDIO_RECITATION, text: 'Récitez la sourate Al-Ikhlas avec Idgham.', points: 30 }
+                ],
+                timeLimitMinutes: 30, passingScore: 70, maxAttempts: 1, createdAt: new Date().toISOString()
+            }
+         ]);
+    }
+
+    // 7. MOCK LIVES
+    const lives = get<LiveSession>(KEYS.LIVES);
+    if (lives.length === 0) {
+        const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1); tomorrow.setHours(18, 0, 0, 0);
+        const nextWeek = new Date(); nextWeek.setDate(nextWeek.getDate() + 7); nextWeek.setHours(10, 0, 0, 0);
+        
+        set(KEYS.LIVES, [
+            {
+                id: 'l1', classId: 'c1', title: 'Correction Prononciation', description: 'Session live pour corriger la Makhraj.',
+                platform: 'Google Meet', meetingLink: 'https://meet.google.com/abc-defg-hij',
+                scheduledAt: tomorrow.toISOString(), durationMinutes: 60, isRecorded: false
+            },
+            {
+                id: 'l2', classId: 'c3', title: 'Q&A Tajwid', description: 'Posez toutes vos questions sur le cours.',
+                platform: 'Zoom', meetingLink: 'https://zoom.us/j/123456789',
+                scheduledAt: nextWeek.toISOString(), durationMinutes: 90, isRecorded: true
+            }
+        ]);
+    }
+
+    // 8. MOCK RESOURCES
     const resources = get<Resource>(KEYS.RESOURCES);
     if (resources.length === 0) {
         set(KEYS.RESOURCES, [
-            { id: 'r1', title: 'Sourate Al-Fatiha Tafsir', category: 'TAFSIR', content: 'Explication détaillée des 7 versets de la mère du livre...' },
-            { id: 'r2', title: 'Règles du Nun Sakina', category: 'TAJWID', content: 'Les 4 règles principales : Izhar, Idgham, Iqlab, Ikhfa...' },
+            { id: 'r1', title: 'Sourate Al-Fatiha Tafsir', category: 'TAFSIR', content: 'Explication détaillée des 7 versets de la mère du livre. La Fatiha est la sourate la plus importante...' },
+            { id: 'r2', title: 'Règles du Nun Sakina', category: 'TAJWID', content: 'Les 4 règles principales : Izhar (Clarté), Idgham (Fusion), Iqlab (Transformation), Ikhfa (Dissimulation)...' },
             { id: 'r3', title: 'Doua de protection', category: 'DUA', content: 'Bismillahi alladhi la yadurru ma\'asmihi...' },
-            { id: 'r4', title: 'Histoire de Moussa (AS)', category: 'HISTORY', content: 'Le prophète qui a parlé à Allah...' },
+            { id: 'r4', title: 'Histoire de Moussa (AS)', category: 'HISTORY', content: 'Le prophète qui a parlé à Allah. Son combat contre Pharaon est cité de nombreuses fois...' },
         ]);
     }
     
-    // Init Mock Forum
+    // 9. MOCK FORUM
     const forum = get<ForumPost>(KEYS.FORUM);
     if (forum.length === 0) {
         set(KEYS.FORUM, [
-            { id: 'f1', userId: 'admin-001', userName: 'Admin Principal', title: 'Bienvenue sur le forum', content: 'Posez vos questions ici.', category: 'General', likes: 10, replies: [], createdAt: new Date().toISOString() }
+            { id: 'f1', userId: 'admin-001', userName: 'Admin Principal', title: 'Bienvenue sur le forum', content: 'Posez vos questions ici. Soyez respectueux.', category: 'General', likes: 10, replies: [], createdAt: new Date().toISOString() },
+            { id: 'f2', userId: 's1', userName: 'Moussa Diop', title: 'Question sur le Madd', content: 'Quelle est la durée exacte du Madd Lazim ?', category: 'Tajwid', likes: 2, replies: [], createdAt: new Date().toISOString() }
         ]);
     }
   },
@@ -87,6 +253,46 @@ export const storageService = {
       return user;
     }
     return null;
+  },
+
+  // LOGIN VIA GOOGLE (New)
+  loginGoogleUser: (googleProfile: { email: string, firstName: string, lastName: string, picture: string }): User => {
+      const users = get<User>(KEYS.USERS);
+      let user = users.find(u => u.email === googleProfile.email);
+
+      // Register if new
+      if (!user) {
+          const newUser: User = {
+              id: Date.now().toString(),
+              firstName: googleProfile.firstName,
+              lastName: googleProfile.lastName,
+              email: googleProfile.email,
+              phone: '', // Optional for Google Users
+              password: Math.random().toString(36).slice(-8), // Random pw
+              role: UserRole.STUDENT,
+              gender: 'Homme', // Default, user can change in profile
+              joinedAt: new Date().toISOString(),
+              xp: 0,
+              level: 1,
+              badges: [],
+              subscriptionPlan: SubscriptionPlan.FREE,
+              referralCode: googleProfile.firstName.substring(0,3).toUpperCase() + Math.floor(Math.random()*1000),
+              bannerUrl: ''
+          };
+          users.push(newUser);
+          set(KEYS.USERS, users);
+          
+          storageService.createNotification({
+              userId: 'ADMIN',
+              title: 'Nouvelle Inscription (Google)',
+              message: `${newUser.firstName} s'est inscrit avec Google.`,
+              type: 'INFO'
+          });
+          user = newUser;
+      }
+
+      localStorage.setItem(KEYS.CURRENT_USER, JSON.stringify(user));
+      return user;
   },
   
   logout: () => {
@@ -123,15 +329,27 @@ export const storageService = {
     return true;
   },
 
+  updateUser: (updatedUser: User) => {
+    let users = get<User>(KEYS.USERS);
+    users = users.map(u => u.id === updatedUser.id ? updatedUser : u);
+    set(KEYS.USERS, users);
+    
+    // Update current user session if it matches
+    const currentUser = storageService.getCurrentUser();
+    if (currentUser && currentUser.id === updatedUser.id) {
+        localStorage.setItem(KEYS.CURRENT_USER, JSON.stringify(updatedUser));
+    }
+  },
+
   addXP: (userId: string, amount: number) => {
       let users = get<User>(KEYS.USERS);
       const idx = users.findIndex(u => u.id === userId);
       if (idx !== -1) {
-          users[idx].xp += amount;
+          users[idx].xp = (users[idx].xp || 0) + amount;
           
           // Level Up Logic (Example: Level = XP / 100)
           const newLevel = Math.floor(users[idx].xp / 100) + 1;
-          if (newLevel > users[idx].level) {
+          if (newLevel > (users[idx].level || 1)) {
               users[idx].level = newLevel;
               storageService.createNotification({
                   userId: userId,
@@ -142,9 +360,10 @@ export const storageService = {
           }
           
           // Badge Logic (Simple examples)
-          if (users[idx].xp >= 500 && !users[idx].badges.some(b => b.id === 'b2')) {
+          if (users[idx].xp >= 500 && !(users[idx].badges || []).some(b => b.id === 'b2')) {
                const badge = BADGES_LIST.find(b => b.id === 'b2');
                if(badge) {
+                   if (!users[idx].badges) users[idx].badges = [];
                    users[idx].badges.push({...badge, unlockedAt: new Date().toISOString()});
                    storageService.createNotification({
                        userId: userId,
@@ -167,7 +386,7 @@ export const storageService = {
 
   getLeaderboard: (): User[] => {
       const users = get<User>(KEYS.USERS);
-      return users.filter(u => u.role === UserRole.STUDENT).sort((a,b) => b.xp - a.xp).slice(0, 10);
+      return users.filter(u => u.role === UserRole.STUDENT).sort((a,b) => (b.xp || 0) - (a.xp || 0)).slice(0, 10);
   },
 
   // Forum
@@ -185,15 +404,48 @@ export const storageService = {
   // Prayer Times (Using External API)
   getPrayerTimes: async () => {
     try {
+        if (!navigator.onLine) throw new Error("Offline");
+
         const today = new Date();
-        const dateStr = `${today.getDate()}-${today.getMonth()+1}-${today.getFullYear()}`;
+        const dd = String(today.getDate()).padStart(2, '0');
+        const mm = String(today.getMonth() + 1).padStart(2, '0');
+        const yyyy = today.getFullYear();
+        const dateStr = `${dd}-${mm}-${yyyy}`;
+
         const response = await fetch(`https://api.aladhan.com/v1/timingsByCity/${dateStr}?city=Dakar&country=Senegal&method=2`);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
         const data = await response.json();
         return data.data.timings;
     } catch (e) {
-        console.error("Erreur API Adhan", e);
-        return null;
+        // Silently warn to avoid alarming console errors in offline/dev environments
+        // console.warn("API Adhan non accessible (Offline ou Erreur), utilisation horaires par défaut.");
+        return {
+            Fajr: "05:30",
+            Dhuhr: "13:15",
+            Asr: "16:30",
+            Maghrib: "19:10",
+            Isha: "20:25"
+        };
     }
+  },
+
+  // Daily Inspiration (Ayat of the Day)
+  getDailyInspiration: (): DailyInspiration => {
+      const dayOfYear = Math.floor((new Date().getTime() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 1000 / 60 / 60 / 24);
+      
+      const inspirations: DailyInspiration[] = [
+          { text: "Souvenez-vous de Moi, Je me souviendrai de vous. Et soyez reconnaissants envers Moi et ne soyez pas ingrats.", source: "Sourate Al-Baqara, 2:152", type: "VERSE" },
+          { text: "Le meilleur d'entre vous est celui qui apprend le Coran et l'enseigne.", source: "Hadith, Sahih Bukhari", type: "HADITH" },
+          { text: "Allah n'impose à aucune âme une charge supérieure à sa capacité.", source: "Sourate Al-Baqara, 2:286", type: "VERSE" },
+          { text: "Certes, avec la difficulté vient la facilité.", source: "Sourate Ash-Sharh, 94:6", type: "VERSE" },
+          { text: "Celui qui suit une route à la recherche de la science, Allah lui facilite une route vers le Paradis.", source: "Hadith, Sahih Muslim", type: "HADITH" }
+      ];
+      
+      return inspirations[dayOfYear % inspirations.length];
   },
 
   // Subscription
@@ -271,6 +523,7 @@ export const storageService = {
     const all = get<Content>(KEYS.CONTENT);
     const idx = all.findIndex(c => c.id === contentId);
     if (idx !== -1) {
+      if (!all[idx].comments) all[idx].comments = [];
       all[idx].comments.push(comment);
       set(KEYS.CONTENT, all);
       storageService.createNotification({

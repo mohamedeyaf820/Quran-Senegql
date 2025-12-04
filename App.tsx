@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Auth } from './components/Auth';
 import { Layout } from './components/Layout';
 import { AdminStats, AdminClasses, AdminStudents, AdminContent, AdminEnrollments } from './components/AdminViews';
-import { StudentClasses, StudentClassroom, StudentProfile, StudentResources, StudentForum, StudentSubscription } from './components/StudentViews';
+import { StudentClasses, StudentClassroom, StudentProfile, StudentResources, StudentForum, StudentSubscription, StudentQuranReader } from './components/StudentViews';
 import { storageService } from './services/storageService';
 import { User, UserRole, EnrollmentStatus } from './types';
 import { BookOpen, CheckCircle, Award } from 'lucide-react';
@@ -49,6 +49,7 @@ function App() {
       switch (currentView) {
         case 'browse': return <StudentClasses currentUser={user} />;
         case 'my-classes': return <StudentClassroom currentUser={user} />;
+        case 'quran': return <StudentQuranReader currentUser={user} />;
         case 'resources': return <StudentResources currentUser={user} />;
         case 'forum': return <StudentForum currentUser={user} />;
         case 'subscription': return <StudentSubscription currentUser={user} />;

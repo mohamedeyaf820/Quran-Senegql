@@ -54,6 +54,7 @@ export interface User {
   subscriptionExpiry?: string;
   referralCode: string;
   referredBy?: string;
+  bannerUrl?: string;
 }
 
 export interface ClassGroup {
@@ -187,6 +188,39 @@ export interface Resource {
   content: string; // HTML or Text
   mediaUrl?: string;
 }
+
+// Chatbot
+export interface ChatMessage {
+  id: string;
+  role: 'user' | 'model';
+  text: string;
+  timestamp: Date;
+}
+
+// Quran Reader Interfaces
+export interface Surah {
+    number: number;
+    name: string;
+    englishName: string;
+    englishNameTranslation: string;
+    numberOfAyahs: number;
+    revelationType: string;
+}
+
+export interface Ayah {
+    number: number;
+    text: string;
+    numberInSurah: number;
+    juz: number;
+    translation?: string; // French translation
+}
+
+export interface DailyInspiration {
+    text: string;
+    source: string; // "Sourate Al-Baqara, 2:152" or "Hadith Bukhari"
+    type: 'VERSE' | 'HADITH';
+}
+
 
 export const LEVELS = [
   "Niveau 0 : Initiation",
