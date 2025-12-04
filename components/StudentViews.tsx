@@ -1,6 +1,7 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { storageService } from '../services/storageService';
-import { ClassGroup, User, EnrollmentRequest, EnrollmentStatus, Content, ContentType, Quiz, QuestionType, QuizAttempt, LiveSession, Question, SubscriptionPlan, BADGES_LIST, ForumPost, Resource, Comment, Surah, Ayah } from '../types';
+import { ClassGroup, User, EnrollmentRequest, EnrollmentStatus, Content, ContentType, Quiz, QuestionType, LiveSession, Question, SubscriptionPlan, BADGES_LIST, ForumPost, Resource, Comment, Surah, Ayah } from '../types';
 import { BookOpen, Search, PlayCircle, FileText, Music, Send, Clock, Award, AlertTriangle, ChevronRight, Mic, StopCircle, Video, Calendar, ThumbsUp, MessageCircle, Download, Share2, CreditCard, Lock, CheckCircle, Trash2, X, Star, Settings, Play, Pause, Volume2, FastForward, Activity, Zap, Book, ChevronLeft, Loader2, RefreshCw, XCircle } from 'lucide-react';
 
 interface StudentProps {
@@ -65,28 +66,41 @@ const CustomAudioPlayer: React.FC<{ src: string, title?: string, type?: 'minimal
         const handleEnded = () => {
             setIsPlaying(false);
             setProgress(0);
+            if (audioRef.current) audioRef.current.currentTime = 0;
         };
+        
+        const handlePause = () => setIsPlaying(false);
+        const handlePlay = () => setIsPlaying(true);
 
         audio.addEventListener('timeupdate', updateProgress);
         audio.addEventListener('loadedmetadata', setAudioData);
         audio.addEventListener('ended', handleEnded);
+        audio.addEventListener('pause', handlePause);
+        audio.addEventListener('play', handlePlay);
 
         return () => {
             audio.removeEventListener('timeupdate', updateProgress);
             audio.removeEventListener('loadedmetadata', setAudioData);
             audio.removeEventListener('ended', handleEnded);
+            audio.removeEventListener('pause', handlePause);
+            audio.removeEventListener('play', handlePlay);
         };
     }, []);
 
-    const togglePlay = () => {
+    const togglePlay = async () => {
         if (!audioRef.current) return;
+        
         if (isPlaying) {
             audioRef.current.pause();
         } else {
-            audioRef.current.play();
-            if (onPlay) onPlay();
+            try {
+                await audioRef.current.play();
+                if (onPlay) onPlay();
+            } catch (error) {
+                console.error("Playback failed", error);
+                setIsPlaying(false);
+            }
         }
-        setIsPlaying(!isPlaying);
     };
 
     const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
