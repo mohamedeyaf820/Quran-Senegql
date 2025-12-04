@@ -65,7 +65,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, user, onLogout, curren
   const [toasts, setToasts] = useState<Notification[]>([]);
   
   const notifiedLivesRef = useRef<Set<string>>(new Set());
-  const logoUrl = "https://file-service-104866657805.us-central1.run.app/files/aa932470-360d-4702-8618-f2b3e8e74a87";
+  const logoUrl = "/logo.svg";
 
   useEffect(() => {
     // Network status listeners

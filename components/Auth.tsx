@@ -29,7 +29,7 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
   });
   const [error, setError] = useState('');
 
-  const logoUrl = "https://file-service-104866657805.us-central1.run.app/files/aa932470-360d-4702-8618-f2b3e8e74a87";
+  const logoUrl = "/logo.svg";
   const isGoogleConfigured = !googleApiService.clientId.startsWith('YOUR_');
 
   // Init Google Sign-In Button
